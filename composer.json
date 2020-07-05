@@ -3,6 +3,9 @@
     "description": "task",
     "type": "library",
     "license": "MIT",
+    "require": {
+        "open-smf/connection-pool":"~1.0"
+    },
     "authors": [
         {
             "name": "Louis ni",
