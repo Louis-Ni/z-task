@@ -1,9 +1,6 @@
 <?php
 namespace ZTask\Pool;
 
-use Illuminate\Database\Connectors\MySqlConnector;
-
-
 class Pool
 {
     protected $channel;
@@ -13,6 +10,11 @@ class Pool
     protected $dbConfig;
 
     protected $currentConnections = 0;
+
+    /**
+     * for check connection alive
+     */
+    protected $interval = 10000;
 
     public function __construct(array $poolConfig, array $dbConfig)
     {
@@ -25,7 +27,7 @@ class Pool
     public function initPool()
     {
         for ($i=0; $i<$this->poolConfig['min_connection']; $i++){
-            $connection = new \ZTask\Pool\MysqlConnection();
+            $connection = new MysqlConnection();
             $connection->connect($this->dbConfig);
             ++$this->currentConnections;
             $this->channel->Push($connection);
@@ -46,6 +48,7 @@ class Pool
         }
 
         $connection = $this->channel->Pop($this->poolConfig['wait_timeout']);
+
         return $connection;
     }
 
@@ -65,5 +68,12 @@ class Pool
         $con = $connection->connect($this->dbConfig);
         $this->channel->Push($con);
         return $con;
+    }
+
+    private function check()
+    {
+        \Swoole\Timer::tick(1000, function (){
+            dump('i am ticker');
+        });
     }
 }
