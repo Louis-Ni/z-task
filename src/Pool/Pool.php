@@ -42,10 +42,11 @@ class Pool
                 return $this->createConnection();
             }
         }catch (\Throwable $throwable){
-
+            throw $throwable;
         }
 
-        return $this->channel->Pop();
+        $connection = $this->channel->Pop($this->poolConfig['wait_timeout']);
+        return $connection;
     }
 
     public function getPoolLength()
