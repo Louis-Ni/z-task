@@ -12,6 +12,10 @@ class Pool
     protected $currentConnections = 0;
 
     /**
+     * for check pool initialized
+     */
+    protected $initialized;
+    /**
      * for check connection alive
      */
     protected $interval = 10000;
@@ -59,7 +63,23 @@ class Pool
 
     public function release($connection)
     {
-        $this->channel->Push($connection);
+        if (!$connection instanceof MysqlConnection){
+            throw new \RuntimeException('connection type incorrect');
+        }
+
+        if (!$this->initialized){
+            throw new \RuntimeException('pool did not initialize');
+        }
+
+        if ($this->getPoolLength() > $this->poolConfig['max_connection']){
+            $connection->disconnect();
+        }
+
+        $connection->setLastActiveTime();
+        $res = $this->channel->Push($connection);
+        if ($res === false){
+            $connection->disconnect();
+        }
     }
 
     private function createConnection()

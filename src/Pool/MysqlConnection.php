@@ -50,4 +50,9 @@ class MysqlConnection
     {
         return $this->lastActiveTime;
     }
+
+    public function setLastActiveTime()
+    {
+        $this->lastActiveTime = microtime(true);
+    }
 }
