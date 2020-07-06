@@ -17,6 +17,8 @@ class MysqlConnection
      */
     protected $pool;
 
+
+
     public function __construct($pool)
     {
         $this->pool = $pool;

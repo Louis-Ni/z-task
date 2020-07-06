@@ -13,6 +13,7 @@ class Frequency
 
     /**
      * pool
+     * @var Pool
      */
     protected $pool;
 
@@ -45,18 +46,42 @@ class Frequency
         $this->beginTime = time();
     }
 
-    public function isHighFrequency()
+    public function hit()
     {
-
+        $this->hits++;
     }
 
-    public function isLowFrequency()
+    public function isHighFrequency() : bool
     {
+        return true;
+    }
 
+    public function isLowFrequency() : bool
+    {
+        $now = microtime();
+        return true;
     }
 
     public function detect()
     {
+        \Swoole\Timer::tick($this->intervalTime, function (){
+            if ($this->isLowFrequency()){
+                $this->pool->dynamicExtension('low');
+                $this->initialConfig();
+                return ;
+            }
 
+            if ($this->isHighFrequency()){
+                $this->pool->dynamicExtension('high');
+                $this->initialConfig();
+                return ;
+            }
+        });
+    }
+
+    private function initialConfig()
+    {
+        $this->beginTime = time();
+        $this->hits = 0;
     }
 }

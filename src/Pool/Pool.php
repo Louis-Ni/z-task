@@ -36,8 +36,20 @@ class Pool
         $this->poolConfig = $poolConfig;
         $this->dbConfig = $dbConfig;
         $this->channel = new Channel(isset($poolConfig['min_connection']) ? $poolConfig['min_connection'] : 10);
-        $this->frequency = new Frequency($this, $poolConfig);
+        $this->frequency = new Frequency($this, $this->poolConfig);
         $this->initPool();
+    }
+
+    public function dynamicExtension($frequency = 'low')
+    {
+        switch ($frequency){
+            case 'low':
+                $this->setLowUsage();
+                break;
+            case 'high':
+                $this->setHighUsage();
+                break;
+        }
     }
 
     public function initPool()
@@ -123,5 +135,15 @@ class Pool
                 $this->channel->Push($con);
             }
         });
+    }
+
+    private function setLowUsage()
+    {
+
+    }
+
+    private function setHighUsage()
+    {
+
     }
 }
