@@ -4,13 +4,18 @@ namespace ZTask\Pool;
 class Pool
 {
     protected $channel;
-
+    /**
+     * pool config
+     */
     protected $poolConfig;
-
+    /**
+     * database config
+     */
     protected $dbConfig;
-
+    /**
+     * current connections
+     */
     protected $currentConnections = 0;
-
     /**
      * for check pool initialized
      */
@@ -31,7 +36,7 @@ class Pool
     public function initPool()
     {
         for ($i=0; $i<$this->poolConfig['min_connection']; $i++){
-            $connection = new MysqlConnection();
+            $connection = new MysqlConnection($this);
             $connection->connect($this->dbConfig);
             ++$this->currentConnections;
             $this->channel->Push($connection);
@@ -89,7 +94,7 @@ class Pool
 
     private function createConnection()
     {
-        $connection = new MysqlConnection();
+        $connection = new MysqlConnection($this);
         $con = $connection->connect($this->dbConfig);
         $this->channel->Push($con);
         return $con;
@@ -99,8 +104,14 @@ class Pool
     {
         \Swoole\Timer::tick($this->interval, function (){
             $num = $this->getPoolLength();
-            if ($num > 0 && $con = $this->channel->Pop(0.01)){
-
+            $con = $this->channel->Pop(0.01);
+            if ($num > 0 && $con){
+                if (!$con->checkAlive()){
+                    $con->disconnect();
+                    --$this->currentConnections;
+                }
+            }else{
+                $this->channel->Push($con);
             }
         });
     }
