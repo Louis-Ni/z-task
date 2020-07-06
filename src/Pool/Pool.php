@@ -38,6 +38,11 @@ class Pool
         }
     }
 
+    public function getPoolConfig()
+    {
+        return $this->poolConfig;
+    }
+
     public function getConnection() : MysqlConnection
     {
         $length = $this->channel->Length();
@@ -92,8 +97,11 @@ class Pool
 
     private function check()
     {
-        \Swoole\Timer::tick(1000, function (){
-            dump('i am ticker');
+        \Swoole\Timer::tick($this->interval, function (){
+            $num = $this->getPoolLength();
+            if ($num > 0 && $con = $this->channel->Pop(0.01)){
+
+            }
         });
     }
 }
