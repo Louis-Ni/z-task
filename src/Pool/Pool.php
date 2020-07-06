@@ -25,11 +25,18 @@ class Pool
      */
     protected $interval = 10000;
 
+    /**
+     * handle frequency
+     * @var Frequency
+     */
+    protected $frequency;
+
     public function __construct(array $poolConfig, array $dbConfig)
     {
         $this->poolConfig = $poolConfig;
         $this->dbConfig = $dbConfig;
         $this->channel = new Channel(isset($poolConfig['min_connection']) ? $poolConfig['min_connection'] : 10);
+        $this->frequency = new Frequency($this, $poolConfig);
         $this->initPool();
     }
 
@@ -89,6 +96,8 @@ class Pool
         $res = $this->channel->Push($connection);
         if ($res === false){
             $connection->disconnect();
+        }else{
+            $this->check();
         }
     }
 
