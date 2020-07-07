@@ -7,11 +7,6 @@ namespace ZTask\Pool;
 class Frequency
 {
     /**
-     * pool begin time
-     */
-    protected $beginTime;
-
-    /**
      * pool
      * @var Pool
      */
@@ -43,7 +38,6 @@ class Frequency
         $this->lowFrequency = isset($config['low_frequency'])?? 10;
         $this->highFrequency = isset($config['high_frequency'])?? 50;
         $this->intervalTime = isset($config['frequency_interval_time']) ?? 60;
-        $this->beginTime = time();
     }
 
     public function hit()
@@ -53,25 +47,37 @@ class Frequency
 
     public function isHighFrequency() : bool
     {
-        return true;
+        if ($this->hits > $this->highFrequency){
+            return true;
+        }
+        return false;
     }
 
     public function isLowFrequency() : bool
     {
-        $now = microtime();
-        return true;
+        if ($this->hits < $this->lowFrequency){
+            return true;
+        }
+        return false;
     }
 
+    public function isBalanceFrequency()
+    {
+        if ($this->hits > $this->lowFrequency && $this->hits < $this->highFrequency){
+            return true;
+        }
+        return false;
+    }
     public function detect()
     {
         \Swoole\Timer::tick($this->intervalTime, function (){
-            if ($this->isLowFrequency()){
+            if ($this->isLowFrequency() && $this->isBalanceFrequency()){
                 $this->pool->dynamicExtension('low');
                 $this->initialConfig();
                 return ;
             }
 
-            if ($this->isHighFrequency()){
+            if ($this->isHighFrequency() && $this->isBalanceFrequency()){
                 $this->pool->dynamicExtension('high');
                 $this->initialConfig();
                 return ;
@@ -81,7 +87,6 @@ class Frequency
 
     private function initialConfig()
     {
-        $this->beginTime = time();
         $this->hits = 0;
     }
 }

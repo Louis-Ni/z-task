@@ -110,6 +110,8 @@ class Pool
             $connection->disconnect();
         }else{
             $this->check();
+            $this->frequency->detect();
+            $this->frequency->hit();
         }
     }
 
@@ -139,11 +141,34 @@ class Pool
 
     private function setLowUsage()
     {
-
+        go(function (){
+            $num = $this->getPoolConfig();
+            $do = true;
+            while ($do){
+                if ($num > $this->poolConfig['low_frequency'] && $con = $this->channel->Pop(0.01)){
+                    if($con->checkAlive()){
+                        $this->release($con);
+                        --$this->currentConnections;
+                    }
+                }else{
+                    $do = false;
+                }
+            }
+        });
     }
 
     private function setHighUsage()
     {
-
+        go(function (){
+            $num = $this->getPoolConfig();
+            $do = true;
+            while ($do){
+                if ($num < $this->poolConfig['high_frequency']){
+                    $this->createConnection();
+                }else{
+                    $do = false;
+                }
+            }
+        });
     }
 }
