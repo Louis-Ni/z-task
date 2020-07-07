@@ -23,13 +23,18 @@ class Pool
     /**
      * for check connection alive
      */
-    protected $interval = 10000;
+    protected $interval = 2000;
 
     /**
      * handle frequency
      * @var Frequency
      */
-    protected $frequency;
+    public $frequency;
+
+    /**
+     * @var array
+     */
+    protected $timer;
 
     public function __construct(array $poolConfig, array $dbConfig)
     {
@@ -38,6 +43,10 @@ class Pool
         $this->channel = new Channel(isset($poolConfig['min_connection']) ? $poolConfig['min_connection'] : 10);
         $this->frequency = new Frequency($this, $this->poolConfig);
         $this->initPool();
+        $this->initialized = true;
+        $this->check();
+        dump('我被初始化了');
+        $this->frequency->detect();
     }
 
     public function dynamicExtension($frequency = 'low')
@@ -54,12 +63,9 @@ class Pool
 
     public function initPool()
     {
-        for ($i=0; $i<$this->poolConfig['min_connection']; $i++){
-            $connection = new MysqlConnection($this);
-            $connection->connect($this->dbConfig);
-            ++$this->currentConnections;
-            $this->channel->Push($connection);
-        }
+//        for ($i=0; $i<$this->poolConfig['min_connection']; $i++){
+//        }
+        $this->createConnection();
     }
 
     public function getPoolConfig()
@@ -81,10 +87,13 @@ class Pool
         }
 
         $connection = $this->channel->Pop($this->poolConfig['wait_timeout']);
-
         return $connection;
     }
 
+    public function setTimer($id)
+    {
+       $this->timer[] = $id;
+    }
     public function getPoolLength()
     {
         return $this->channel->Length();
@@ -109,8 +118,6 @@ class Pool
         if ($res === false){
             $connection->disconnect();
         }else{
-            $this->check();
-            $this->frequency->detect();
             $this->frequency->hit();
         }
     }
@@ -120,23 +127,28 @@ class Pool
         $connection = new MysqlConnection($this);
         $con = $connection->connect($this->dbConfig);
         $this->channel->Push($con);
+        ++$this->currentConnections;
         return $con;
     }
 
     private function check()
     {
-        \Swoole\Timer::tick($this->interval, function (){
-            $num = $this->getPoolLength();
-            $con = $this->channel->Pop(0.01);
-            if ($num > 0 && $con){
-                if (!$con->checkAlive()){
-                    $con->disconnect();
-                    --$this->currentConnections;
+       $in = \Swoole\Timer::tick($this->interval, function (){
+            go(function (){
+                dump(['currentTickCID'=>\Co::getCid()]);
+                $num = $this->getPoolLength();
+                $con = $this->channel->Pop(0.01);
+                if ($num > 0 && $con){
+                    if (!$con->checkAlive()){
+                        $con->disconnect();
+                        --$this->currentConnections;
+                    }else{
+                        $this->channel->Push($con);
+                    }
                 }
-            }else{
-                $this->channel->Push($con);
-            }
+            });
         });
+       $this->timer[] = $in;
     }
 
     private function setLowUsage()

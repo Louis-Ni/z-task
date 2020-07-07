@@ -13,7 +13,7 @@ class Channel
         $this->chanel = new \Swoole\Coroutine\Channel($size);
     }
 
-    public function Pop(float $timeout = -1): MysqlConnection
+    public function Pop(float $timeout = -1)
     {
        return $this->chanel->pop($timeout);
     }

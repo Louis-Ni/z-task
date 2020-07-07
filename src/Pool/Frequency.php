@@ -30,14 +30,14 @@ class Frequency
     /**
      * pop connection times
      */
-    protected $hits = 0;
+    public $hits = 0;
 
     public function __construct($pool, $config)
     {
         $this->pool = $pool;
-        $this->lowFrequency = isset($config['low_frequency'])?? 10;
-        $this->highFrequency = isset($config['high_frequency'])?? 50;
-        $this->intervalTime = isset($config['frequency_interval_time']) ?? 60;
+        $this->lowFrequency = isset($config['low_frequency']) == true? $config['low_frequency']: 10;
+        $this->highFrequency = isset($config['high_frequency'])==true ? $config['high_frequency']: 50;
+        $this->intervalTime = isset($config['frequency_interval_time'])== true? $config['frequency_interval_time']: 60;
     }
 
     public function hit()
@@ -63,26 +63,31 @@ class Frequency
 
     public function isBalanceFrequency()
     {
-        if ($this->hits > $this->lowFrequency && $this->hits < $this->highFrequency){
+        if ($this->hits > $this->lowFrequency && $this->hits < $this->highFrequency || $this->hits == 0){
             return true;
         }
         return false;
     }
     public function detect()
     {
-        \Swoole\Timer::tick($this->intervalTime, function (){
-            if ($this->isLowFrequency() && $this->isBalanceFrequency()){
-                $this->pool->dynamicExtension('low');
-                $this->initialConfig();
-                return ;
-            }
+       $in =  \Swoole\Timer::tick($this->intervalTime * 1000, function (){
+            go(function (){
+                if ($this->isLowFrequency() && !$this->isBalanceFrequency()){
+                    dump('setLowExtension');
+                    $this->pool->dynamicExtension('low');
+                    $this->initialConfig();
+                    return ;
+                }
 
-            if ($this->isHighFrequency() && $this->isBalanceFrequency()){
-                $this->pool->dynamicExtension('high');
-                $this->initialConfig();
-                return ;
-            }
+                if ($this->isHighFrequency() && !$this->isBalanceFrequency()){
+                    dump('setHighExtension');
+                    $this->pool->dynamicExtension('high');
+                    $this->initialConfig();
+                    return ;
+                }
+            });
         });
+       $this->pool->setTimer($in);
     }
 
     private function initialConfig()

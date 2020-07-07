@@ -39,8 +39,10 @@ class MysqlConnection
         $now = microtime(true);
 
         if ($now > $maxIdle + $this->lastActiveTime){
+            dump('connection Dead');
             return false;
         }
+        dump('connection alive');
         return true;
     }
 
